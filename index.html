@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Feltapp">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Feltapp prototype</title>
+<title>Feltapp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -111,6 +111,13 @@ summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:
 .seg input:checked+span{background:var(--water);color:var(--waterInk);border-color:var(--water)}
 .seg input:focus-visible+span{outline:3px solid var(--sky)}
 .avvik p{margin:4px 0 8px}
+.sw{position:relative;margin-bottom:10px;border-radius:14px;overflow:hidden;background:#f6ddd0}
+.sw.go{background:var(--hot)}
+.sw-bg{position:absolute;inset:0;display:flex;align-items:center;padding:0 22px;font-weight:700;color:#9a3a0a}
+.sw.go .sw-bg{color:#fff}.sw.r .sw-bg{justify-content:flex-end}
+.sw .card{margin:0;position:relative;transition:transform .2s;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.btn.danger{background:var(--hot);color:#fff}
+.tip{margin:8px 0 0}
 .hrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:22px 0 8px}.hrow h3{margin:0}
 .info{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:0;padding:12px 14px;background:var(--surf);border-radius:12px}
 .info dt{color:var(--mute);font-size:14px}.info dd{margin:0;font-weight:600;overflow-wrap:anywhere}
@@ -178,7 +185,7 @@ const ALV={Lav:'lav',Middels:'mid','Høy':'hoy'};
 let q='';
 const hay=i=>[i.nr,i.kunde,i.strekk,i.kontraktor,i.maalesystem,i.flytekabel,i.startkum,i.endekum].join(' ').toLowerCase();
 function listRes(){
- const card=i=>`<button class="card" data-open="${esc(i.id)}"><span class="row"><b>${esc(i.nr)}</b><span class="chip ${i.status==='klar'?'klar':(i.inn?'felt':'')}">${i.status==='klar'?'Klar til fakturering':(i.inn?'Ute i felt':'Pågår')}</span></span><span class="big">${esc(i.strekk)}</span><span class="mute small">${esc(i.kunde)} · ${fmtT(timer(i))} · ${kmSum(i)} km</span></button>`;
+ const card=i=>`<div class="sw"><div class="sw-bg">Slett</div><button class="card" data-open="${esc(i.id)}"><span class="row"><b>${esc(i.nr)}</b><span class="chip ${i.status==='klar'?'klar':(i.inn?'felt':'')}">${i.status==='klar'?'Klar til fakturering':(i.inn?'Ute i felt':'Pågår')}</span></span><span class="big">${esc(i.strekk)}</span><span class="mute small">${esc(i.kunde)} · ${fmtT(timer(i))} · ${kmSum(i)} km</span></button></div>`;
  const ord=q.trim().toLowerCase().split(/\s+/).filter(Boolean),L=S.insp.filter(i=>{const h=hay(i);return ord.every(o=>h.includes(o))});
  const a=L.filter(i=>i.status!=='klar'),k=L.filter(i=>i.status==='klar');
  if(ord.length&&!L.length)return `<p class="mute">Ingen oppdrag passer «${esc(q.trim())}».</p>`;
@@ -187,7 +194,7 @@ function listRes(){
 }
 function vList(){
  return `<section class="pad"><div class="hero"><img src="${LOGO}" alt="Leak Detector"><span>Feltapp</span></div><button class="btn primary wide" data-act="ny">+ Ny inspeksjon</button>
- <input type="search" id="sok" class="sok" placeholder="Søk på nr., strekk, kunde, kabel …" value="${esc(q)}" aria-label="Søk i oppdrag" autocomplete="off">
+ <input type="search" id="sok" class="sok" placeholder="Søk på nr., strekk, kunde, kabel …" value="${esc(q)}" aria-label="Søk i oppdrag" autocomplete="off"><p class="mute small tip">Sveip et oppdrag til siden for å slette det.</p>
  <div id="res">${listRes()}</div></section>`;
 }
 const NR=/^LI-E(\d{2})(\d{2})(\d{3})$/;
@@ -289,7 +296,9 @@ function vModal(i){
  ${inn?'':`<p class="mute small">Økten varte i ${dur(n-i.inn)} (fra kl. ${tid(i.inn)}).</p>`}
  <div class="two"><button class="btn ghost" data-act="avbryt">Avbryt</button><button class="btn ${inn?'primary':'vis'}" id="okbtn" data-act="${inn?'okinn':'okut'}">OK, stemple ${inn?'inn':'ut'}</button></div></div></div>`;
 }
-let lastKey='';
+let lastKey='',slettId=null,sw=null,swipedAt=0;
+function vSlett(){const i=slettId&&S.insp.find(x=>x.id===slettId);if(!i)return '';
+ return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="dlg"><h2 id="mt">Slette inspeksjonen?</h2><p><b>${esc(i.nr)}</b> · ${esc(i.strekk)}</p><p class="mute small">Alle økter, logg, avvik og kjøring for oppdraget slettes. Dette kan ikke angres.</p><div class="two"><button class="btn ghost" id="okbtn" data-act="avbryt">Avbryt</button><button class="btn danger" data-act="slettok">Slett</button></div></div></div>`}
 function toTop(){try{window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;$('app').scrollIntoView({block:'start'})}catch(e){}}
 function render(){
  let i=cur();if(S.view==='insp'&&!i)S.view='liste';
@@ -298,21 +307,22 @@ function render(){
  $('ht').textContent=v==='insp'?i.nr:v==='ny'?'Ny inspeksjon':'Inspeksjoner';
  $('hs').textContent=v==='insp'?i.strekk+' · '+i.kunde:v==='ny'?'Leak Detector · feltapp':S.insp.filter(x=>x.status!=='klar').length+' pågående · '+S.insp.filter(x=>x.status==='klar').length+' klar til fakturering';
  if(v!=='insp')pend=null;
- $('main').innerHTML=v==='insp'?vInsp(i)+vModal(i):v==='ny'?vNy():vList();
+ $('main').innerHTML=v==='insp'?vInsp(i)+vModal(i):v==='ny'?vNy():vList()+vSlett();
  const key=v+'|'+(S.cur||'')+'|'+(v==='insp'?S.tab:'');if(key!==lastKey){if(lastKey)toTop();lastKey=key}
  const ok=$('okbtn');if(ok)ok.focus({preventScroll:true});
 }
 const go=()=>{save();render()};
 
 document.addEventListener('click',e=>{
- if(e.target.classList.contains('ov')){pend=null;render();return}
+ if(e.target.classList.contains('ov')){pend=null;slettId=null;render();return}
+ if(Date.now()-swipedAt<400&&e.target.closest('.card'))return;
  const b=e.target.closest('button');if(!b)return;
  const i=cur(),d=b.dataset;
  if(b.id==='back'||d.open||d.tab)redig=false;
  if(b.id==='back'){S.view='liste';S.cur=null;go();return}
  if(d.open){S.cur=d.open;S.view='insp';S.tab='felt';go();return}
  if(d.tab){S.tab=d.tab;go();return}
- if(!i&&!['ny','nullstill'].includes(d.act))return;
+ if(!i&&!['ny','nullstill','avbryt','slettok'].includes(d.act))return;
  if(d.delokt!=null){const o=i.okter.splice(+d.delokt,1)[0];log(i,'Økt slettet: '+dt(o.inn)+'–'+tid(o.ut));go();return}
  if(d.delkm!=null){i.km.splice(+d.delkm,1);go();return}
  if(d.avstat!=null){const a=i.avvik[+d.avstat];a.status=a.status==='Lukket'?'Åpen':'Lukket';log(i,'Avvik '+(a.status==='Lukket'?'lukket':'gjenåpnet')+': '+a.type);go();return}
@@ -321,7 +331,8 @@ document.addEventListener('click',e=>{
   nullstill(){S=seed()},
   inn(){pend='inn'},
   ut(){pend='ut'},
-  avbryt(){pend=null},
+  avbryt(){pend=null;slettId=null},
+  slettok(){S.insp=S.insp.filter(x=>x.id!==slettId);slettId=null},
   redig(){redig=true},
   ferdig(){redig=false},
   okinn(){pend=null;if(!i.inn){i.inn=Date.now();log(i,'Stemplet inn')}},
@@ -361,7 +372,13 @@ document.addEventListener('submit',e=>{
 });
 document.addEventListener('change',e=>{const k=e.target.dataset.f,i=cur();if(!k||!i)return;
  i[k]=k==='meter'?(e.target.value?+e.target.value:null):e.target.value;go()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pend){pend=null;render()}});
+document.addEventListener('pointerdown',e=>{const c=e.target.closest('.sw .card');if(!c||pend||slettId)return;sw={c,x:e.clientX,y:e.clientY,dx:0,on:false,id:e.pointerId}});
+document.addEventListener('pointermove',e=>{if(!sw||e.pointerId!==sw.id)return;const dx=e.clientX-sw.x,dy=e.clientY-sw.y;
+ if(!sw.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){sw=null;return}if(Math.abs(dx)<10)return;sw.on=true;try{sw.c.setPointerCapture(e.pointerId)}catch(err){}sw.c.style.transition='none'}
+ e.preventDefault();sw.dx=dx;sw.c.style.transform='translateX('+dx+'px)';const w=sw.c.parentElement;w.classList.toggle('r',dx<0);w.classList.toggle('go',Math.abs(dx)>90)},{passive:false});
+const swEnd=(e,ok)=>{if(!sw||e.pointerId!==sw.id)return;const s=sw;sw=null;if(!s.on)return;swipedAt=Date.now();s.c.style.transition='';s.c.style.transform='';s.c.parentElement.classList.remove('go');if(ok&&Math.abs(s.dx)>90){slettId=s.c.dataset.open;render()}};
+document.addEventListener('pointerup',e=>swEnd(e,true));document.addEventListener('pointercancel',e=>swEnd(e,false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(pend||slettId)){pend=null;slettId=null;render()}});
 document.addEventListener('input',e=>{if(e.target.id==='sok'){q=e.target.value;$('res').innerHTML=listRes();return}const i=cur();if(i&&e.target.dataset.f==='kommentar'){i.kommentar=e.target.value;save()}});
 const tick=setInterval(()=>{const i=cur();if(!i||!i.inn)return;const l=$('live'),s=$('sumT');if(l)l.textContent=dur(Date.now()-i.inn);if(s)s.textContent=fmtT(timer(i))},30000);
 render();
