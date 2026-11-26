@@ -688,14 +688,16 @@ function tKm(i){
  <p class="total">Totalt <b>${kmSum(i)} km</b></p>`;
 }
 const num=n=>String(+(+n).toFixed(2)).replace('.',',');
-const dager=ms=>{const h=Math.round(ms/H);return (h>=24?Math.floor(h/24)+' d ':'')+(h%24)+' t'};
+const dager=ms=>{const h=Math.round(ms/H),dd=Math.floor(h/24),t=h%24;return (dd?dd+(dd===1?' døgn':' døgn'):'')+(dd&&t?' og ':'')+(t||!dd?t+(t===1?' time':' timer'):'')};
+const rtype=i=>i.reftype||(i.opp?'opp':'inst');
 function refData(i){
  const okt=i.okter.slice().sort((a,b)=>a.inn-b.inn),logg=i.logg.slice().sort((a,b)=>a.t-b.t),bil={};
  i.km.forEach(k=>{bil[k.bil]=(bil[k.bil]||0)+(+k.km||0)});
- return{status:i.status==='klar'?'Fullført':'Utkast',
+ const T=rtype(i);
+ return{type:T,title:T==='opp'?'Opptrekksreferat':'Installasjonsreferat',badge:T==='opp'?(i.status==='klar'?'Fullført':'Utkast'):'',
   oppdrag:[['Inspeksjonsnr.',i.nr],['Kommune/kunde',i.kunde],['Navn på strekk',i.strekk],['Kontraktør',i.kontraktor]],
   utstyr:[['Målesystem',i.maalesystem],['Flytekabel',i.flytekabel],['Startkum',i.startkum],['Endekum',i.endekum],['Antall meter',i.meter?i.meter+' m':'']],
-  tid:[['Måleperiode',i.ut?periode(i):''],['Kabel i bakken',i.ut?(i.opp?dager(i.opp-i.ut):'Ligger ute nå'):'']],
+  tid:T==='opp'?[['Kabel satt ut',i.ut?dt(i.ut):''],['Kabel trukket opp',i.opp?dt(i.opp):''],['Antall dager ute',i.ut&&i.opp?dager(i.opp-i.ut):'']]:[['Kabel satt ut',i.ut?dt(i.ut):''],['Måleperiode',i.ut?'Startet '+dt(i.ut)+', pågår':'']],
   okt:okt.map(o=>dato(o.inn)+' kl. '+tid(o.inn)+'–'+tid(o.ut)+' ('+num((o.ut-o.inn)/H)+' t)'+(o.manuell?', lagt inn manuelt':'')).concat(i.inn?[dato(i.inn)+' fra kl. '+tid(i.inn)+', pågår']:[]),
   logg:logg.map(l=>[dato(l.t)+' '+tid(l.t),l.x]),
   avvik:i.avvik.slice().sort((a,b)=>a.t-b.t),
@@ -710,8 +712,8 @@ function refDoc(i,logo){
  const d=refData(i);
  return `<div style="font-family:Montserrat,Arial,sans-serif;color:#2f3437;line-height:1.45">
  ${logo?`<img src="${LOGO}" alt="Leak Detector" style="width:150px;height:auto;display:block;margin-bottom:10px">`:''}
- <h1 style="font-size:20px;margin:0;color:#2f3437">Installasjonsreferat</h1>
- <p style="margin:2px 0 0;color:#5d686e;font-size:14px">${esc(i.nr)} · ${esc(i.strekk)} · <b>${d.status}</b></p>
+ <h1 style="font-size:20px;margin:0;color:#2f3437">${d.title}</h1>
+ <p style="margin:2px 0 0;color:#5d686e;font-size:14px">${esc(i.nr)} · ${esc(i.strekk)}${d.badge?` · <b>${d.badge}</b>`:''}</p>
  <h2 style="${RH}">1. Oppdrag</h2>${kvH(d.oppdrag)}
  <h2 style="${RH}">2. Utstyr</h2>${kvH(d.utstyr)}
  <h2 style="${RH}">3. Tidslinje</h2>${kvH(d.tid)}
@@ -726,7 +728,7 @@ function refDoc(i,logo){
  <p style="margin:24px 0 0;font-size:12px;color:#5d686e">Generert ${dt(Date.now())} · Leak Detector Feltmakker</p></div>`;
 }
 function refText(i){
- const d=refData(i),L=['INSTALLASJONSREFERAT – '+i.nr,i.strekk+' · '+d.status],kv=r=>r.forEach(([k,v])=>L.push(k+': '+(v||'–')));
+ const d=refData(i),L=[d.title.toUpperCase()+' – '+i.nr,i.strekk+(d.badge?' · '+d.badge:'')],kv=r=>r.forEach(([k,v])=>L.push(k+': '+(v||'–')));
  L.push('','1. OPPDRAG');kv(d.oppdrag);L.push('','2. UTSTYR');kv(d.utstyr);L.push('','3. TIDSLINJE');kv(d.tid);
  L.push('Dager i felt:');d.okt.forEach(x=>L.push('  - '+x));if(!d.okt.length)L.push('  Ingen');
  L.push('Feltlogg:');d.logg.forEach(([t,x])=>L.push('  '+t+'  '+x));if(!d.logg.length)L.push('  Ingen');
@@ -742,7 +744,10 @@ function mangler(i){
 }
 function tRef(i){
  const m=mangler(i),K=i.status==='klar';
- return `${K?'':`<label>Kommentarer til referatet<textarea data-f="kommentar" rows="3" placeholder="Valgfritt, vises nederst i referatet">${esc(i.kommentar)}</textarea></label>`}
+ const T=rtype(i);
+ return `<fieldset class="seg"><legend>Type referat</legend>${[['inst','Installasjon'],['opp','Opptrekk']].map(([v,l])=>`<label><input type="radio" name="reftype" data-f="reftype" value="${v}" ${T===v?'checked':''}><span>${l}</span></label>`).join('')}</fieldset>
+ <p class="mute small tip">${T==='opp'?'Sendes når settet er trukket opp. Viser hvor lenge kabelen lå ute.':'Sendes når installasjonen er ferdig og dere har stemplet ut.'}</p>
+ ${K?'':`<label style="margin-top:12px">Kommentarer til referatet<textarea data-f="kommentar" rows="3" placeholder="Valgfritt, vises nederst i referatet">${esc(i.kommentar)}</textarea></label>`}
  <div class="doc" id="refdoc">${refDoc(i,true)}</div>
  <div class="refbtn">${navigator.share?'<button class="btn primary" data-act="del">Del</button>':''}<button class="btn ghost" data-act="kopier">Kopier</button><button class="btn ghost" data-act="pdf">Last ned PDF</button></div>
  <p class="mute small" id="kopimsg">${navigator.share?'Del sender referatet til e-post, Teams og lignende. ':''}Kopier limes inn i e-post eller Word.</p>
@@ -760,8 +765,8 @@ async function lagPdf(i){
   const d=refData(i),{jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),M=15,W=210-2*M,PH=297,BL=[38,115,156],GR=[93,104,110],INK=[47,52,55];
   let y=M;
   try{const lg=await logoPng(),lw=48;doc.addImage(lg.d,'PNG',M,y,lw,lw*lg.h/lg.w);y+=lw*lg.h/lg.w+11}catch(e){}
-  doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(...INK);doc.text('Installasjonsreferat',M,y);y+=6;
-  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...GR);doc.text(i.nr+' · '+i.strekk+' · '+d.status,M,y);y+=4;
+  doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(...INK);doc.text(d.title,M,y);y+=6;
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...GR);doc.text(i.nr+' · '+i.strekk+(d.badge?' · '+d.badge:''),M,y);y+=4;
   const head=t=>{if(y>PH-55){doc.addPage();y=M}y+=7;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...BL);doc.text(t,M,y);y+=3};
   const sub=t=>{if(y>PH-40){doc.addPage();y=M}y+=5;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...INK);doc.text(t,M,y);y+=2};
   const para=t=>{doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.splitTextToSize(t,W).forEach(l=>{if(y>PH-20){doc.addPage();y=M}y+=4.6;doc.text(l,M,y)});y+=1};
@@ -780,7 +785,7 @@ async function lagPdf(i){
   head('6. Kommentarer');para(d.kommentar||'–');
   const n=doc.getNumberOfPages(),gen='Generert '+dt(Date.now())+' · Leak Detector Feltmakker';
   for(let p=1;p<=n;p++){doc.setPage(p);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(gen,M,PH-8);doc.text('Side '+p+' av '+n,210-M,PH-8,{align:'right'})}
-  const navn=('Referat '+i.nr+' '+i.strekk).replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf',blob=doc.output('blob'),fil=new File([blob],navn,{type:'application/pdf'});
+  const navn=(d.title+' '+i.nr+' '+i.strekk).replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf',blob=doc.output('blob'),fil=new File([blob],navn,{type:'application/pdf'});
   if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[fil]})){
    try{await navigator.share({files:[fil],title:navn});say('PDF klar.');return}catch(e){if(e&&e.name==='AbortError'){say('');return}}
   }
@@ -848,7 +853,7 @@ document.addEventListener('click',e=>{
    const html=refDoc(i,false),txt=refText(i);
    try{if(window.ClipboardItem&&navigator.clipboard.write){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(ok,()=>navigator.clipboard.writeText(txt).then(ok,fail))}else navigator.clipboard.writeText(txt).then(ok,fail)}
    catch(err){fail()}return 'stay'},
-  del(){const msg=$('kopimsg');try{navigator.share({title:'Installasjonsreferat '+i.nr,text:refText(i)}).catch(()=>{})}catch(err){msg.textContent='Deling er ikke tilgjengelig her. Bruk «Kopier».'}return 'stay'},
+  del(){const msg=$('kopimsg');try{navigator.share({title:refData(i).title+' '+i.nr,text:refText(i)}).catch(()=>{})}catch(err){msg.textContent='Deling er ikke tilgjengelig her. Bruk «Kopier».'}return 'stay'},
   pdf(){lagPdf(i);return 'stay'}
  };
  if(A[d.act]&&A[d.act]()!=='stay')go();
