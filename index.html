@@ -111,6 +111,12 @@ summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:
 .seg input:checked+span{background:var(--water);color:var(--waterInk);border-color:var(--water)}
 .seg input:focus-visible+span{outline:3px solid var(--sky)}
 .avvik p{margin:4px 0 8px}
+.thumbs,.rthumbs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+.thumbs img{width:76px;height:76px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:var(--surf)}
+.rthumbs img{width:120px;height:90px;object-fit:cover;border-radius:4px;border:1px solid #c9d6dc}
+.ov.lys{align-items:center;flex-direction:column;gap:12px;background:rgba(4,20,27,.85)}
+.ov.lys img{max-width:100%;max-height:78vh;border-radius:10px;cursor:zoom-out}
+.ov.lys .lukk{background:#fff;min-width:140px}
 .doc{border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0;background:#fff;overflow-x:auto;box-shadow:0 4px 14px -8px rgba(0,0,0,.25)}
 .refbtn{display:flex;gap:8px;flex-wrap:wrap}.refbtn .btn{flex:1 1 0}
 @media print{body{background:#fff}.app{box-shadow:none;max-width:none;min-height:0}header,.sum,.tabs,footer,#main section>*:not(#refdoc){display:none!important}#main section{padding:0}.doc{border:0;padding:0;margin:0;box-shadow:none;overflow:visible}@page{margin:15mm}}
@@ -671,12 +677,12 @@ function tLogg(i){
  <ul class="list logg">${i.logg.slice().sort((a,b)=>b.t-a.t).map(l=>`<li><time>${dato(l.t)}<b>${tid(l.t)}</b></time><span>${esc(l.x)}</span></li>`).join('')||'<li class="mute">Ingen oppdateringer ennå.</li>'}</ul>`;
 }
 function tAvvik(i){
- const li=i.avvik.map((a,r)=>`<li><div class="row"><b>${esc(a.type)}</b><span class="chip ${ALV[a.alvor]||''}">${esc(a.alvor)}</span></div><p>${esc(a.beskr)}</p><div class="row mute small"><span>${dt(a.t)}${a.bilde?' · bilde: '+esc(a.bilde):''}</span><button class="btn tiny ${a.status==='Lukket'?'ghost':'vis'}" data-avstat="${r}">${a.status==='Lukket'?'Lukket · gjenåpne':'Åpen · lukk'}</button></div></li>`).reverse().join('');
+ const li=i.avvik.map((a,r)=>`<li><div class="row"><b>${esc(a.type)}</b><span class="chip ${ALV[a.alvor]||''}">${esc(a.alvor)}</span></div><p>${esc(a.beskr)}</p>${thumbs(a.bilder)}<div class="row mute small"><span>${dt(a.t)}${!(a.bilder&&a.bilder.length)&&a.bilde?' · bilde: '+esc(a.bilde):''}</span><button class="btn tiny ${a.status==='Lukket'?'ghost':'vis'}" data-avstat="${r}">${a.status==='Lukket'?'Lukket · gjenåpne':'Åpen · lukk'}</button></div></li>`).reverse().join('');
  return `<details class="box" ${i.avvik.length?'':'open'}><summary>+ Registrer avvik</summary><form class="form" id="avvikform">
  <label>Type<select name="type">${TYPER.map(t=>`<option>${t}</option>`).join('')}</select></label>
  <fieldset class="seg"><legend>Alvorlighet</legend>${Object.keys(ALV).map((a,k)=>`<label><input type="radio" name="alvor" value="${a}" ${k?'':'checked'}><span>${a}</span></label>`).join('')}</fieldset>
  <label>Beskrivelse<textarea name="beskr" rows="3" required placeholder="Hva skjedde, og hvor?"></textarea></label>
- <label>Bilde<input type="file" name="bilde" accept="image/*"></label>
+ <label>Bilder<input type="file" name="bilde" accept="image/*" multiple></label>
  <button class="btn primary wide">Lagre avvik</button></form></details>
  <ul class="list avvik">${li||'<li class="mute">Ingen avvik registrert.</li>'}</ul>`;
 }
@@ -722,7 +728,7 @@ function refDoc(i,logo){
  <p style="margin:12px 0 4px;font-weight:600;font-size:14px">Feltlogg</p>
  ${d.logg.length?`<table style="border-collapse:collapse;width:100%">${d.logg.map(([t,x])=>`<tr><td style="${RB}white-space:nowrap;width:1%;color:#5d686e">${t}</td><td style="${RB}">${esc(x)}</td></tr>`).join('')}</table>`:'<p style="font-size:14px;margin:0">Ingen oppdateringer.</p>'}
  <h2 style="${RH}">4. Avvik</h2>
- ${d.avvik.length?d.avvik.map(a=>`<div style="border:1px solid #c9d6dc;border-left:5px solid ${ACOL[a.alvor]||'#c9d6dc'};padding:8px 10px;margin-bottom:8px;font-size:14px"><b>${esc(a.type)}</b> · ${esc(a.alvor)} · ${esc(a.status)}<br><span style="color:#5d686e">${dt(a.t)}${a.bilde?' · bilde: '+esc(a.bilde):''}</span><br>${esc(a.beskr)}</div>`).join(''):'<p style="font-size:14px;margin:0">Ingen avvik registrert.</p>'}
+ ${d.avvik.length?d.avvik.map(a=>`<div style="border:1px solid #c9d6dc;border-left:5px solid ${ACOL[a.alvor]||'#c9d6dc'};padding:8px 10px;margin-bottom:8px;font-size:14px"><b>${esc(a.type)}</b> · ${esc(a.alvor)} · ${esc(a.status)}<br><span style="color:#5d686e">${dt(a.t)}</span><br>${esc(a.beskr)}${logo?thumbs(a.bilder,'rthumbs'):((a.bilder||[]).length?`<br><i>${a.bilder.length} bilde(r), se PDF</i>`:'')}</div>`).join(''):'<p style="font-size:14px;margin:0">Ingen avvik registrert.</p>'}
  <h2 style="${RH}">5. Ressursbruk</h2>${kvH(d.ress)}
  <h2 style="${RH}">6. Kommentarer</h2><p style="white-space:pre-line;font-size:14px;margin:0">${d.kommentar?esc(d.kommentar):'–'}</p>
  <p style="margin:24px 0 0;font-size:12px;color:#5d686e">Generert ${dt(Date.now())} · Leak Detector Feltmakker</p></div>`;
@@ -780,7 +786,16 @@ async function lagPdf(i){
   head('3. Tidslinje');kv(d.tid);
   sub('Dager i felt');if(d.okt.length)d.okt.forEach(x=>para('•  '+x));else para('Ingen økter registrert.');
   sub('Feltlogg');if(d.logg.length)tab(d.logg,{columnStyles:{0:{cellWidth:34,textColor:GR}}});else para('Ingen oppdateringer.');
-  head('4. Avvik');if(d.avvik.length)tab(d.avvik.map(a=>[dt(a.t),a.type,a.alvor,a.status,a.beskr+(a.bilde?' (bilde: '+a.bilde+')':'')]),{head:[['Tid','Type','Alvorlighet','Status','Beskrivelse']],headStyles:{fillColor:BL,textColor:255,fontStyle:'bold'},columnStyles:{0:{cellWidth:27},1:{cellWidth:32},2:{cellWidth:22},3:{cellWidth:17}}});else para('Ingen avvik registrert.');
+  head('4. Avvik');if(d.avvik.length)tab(d.avvik.map(a=>[dt(a.t),a.type,a.alvor,a.status,a.beskr+((a.bilder||[]).length?' ('+a.bilder.length+' bilde'+(a.bilder.length>1?'r':'')+', se under)':'')]),{head:[['Tid','Type','Alvorlighet','Status','Beskrivelse']],headStyles:{fillColor:BL,textColor:255,fontStyle:'bold'},columnStyles:{0:{cellWidth:27},1:{cellWidth:32},2:{cellWidth:22},3:{cellWidth:17}}});else para('Ingen avvik registrert.');
+  const medB=d.avvik.filter(x=>(x.bilder||[]).length);
+  if(medB.length){sub('Bilder fra avvik');const cw=(W-6)/2;
+   for(const a of medB){para(a.type+' · '+dt(a.t));let col=0,rowH=0;
+    for(const id of a.bilder){const v=await idbGet(id).catch(()=>null);if(!v)continue;
+     let w=cw,h=w*v.h/v.w;if(h>75){h=75;w=h*v.w/v.h}
+     if(col===0&&y+h+6>PH-20){doc.addPage();y=M}
+     doc.addImage(v.d,'JPEG',M+col*(cw+6),y+2,w,h);rowH=Math.max(rowH,h);
+     if(++col===2){col=0;y+=rowH+5;rowH=0}}
+    if(col)y+=rowH+5}}
   head('5. Ressursbruk');kv(d.ress);
   head('6. Kommentarer');para(d.kommentar||'–');
   const n=doc.getNumberOfPages(),gen='Generert '+dt(Date.now())+' · Leak Detector Feltmakker';
@@ -793,6 +808,27 @@ async function lagPdf(i){
   say('PDF lastet ned: '+navn);
  }catch(e){say('Kunne ikke lage PDF. Bruk «Del» eller «Kopier».')}
 }
+const IMG={};let idbP=null;
+function idb(){if(!idbP)idbP=new Promise((res,rej)=>{try{const r=indexedDB.open('feltmakker',1);r.onupgradeneeded=()=>r.result.createObjectStore('bilder');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});return idbP}
+const idbDo=(mode,fn)=>idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction('bilder',mode),st=tx.objectStore('bilder'),q=fn(st);tx.oncomplete=()=>res(q&&q.result);tx.onerror=()=>rej(tx.error)}));
+const idbPut=(id,v)=>idbDo('readwrite',st=>st.put(v,id));
+const idbGet=id=>IMG[id]?Promise.resolve(IMG[id]):idbDo('readonly',st=>st.get(id)).then(v=>{if(v)IMG[id]=v;return v});
+const idbDel=ids=>ids.length?idbDo('readwrite',st=>{ids.forEach(id=>{st.delete(id);delete IMG[id]})}).catch(()=>{}):Promise.resolve();
+const idbClear=()=>idbDo('readwrite',st=>st.clear()).catch(()=>{});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+const bildeIds=i=>i.avvik.flatMap(a=>a.bilder||[]);
+async function krymp(file){
+ const url=URL.createObjectURL(file);
+ try{const im=await new Promise((res,rej)=>{const x=new Image();x.onload=()=>res(x);x.onerror=rej;x.src=url});
+  const k=Math.min(1,1200/Math.max(im.naturalWidth,im.naturalHeight)),w=Math.round(im.naturalWidth*k),h=Math.round(im.naturalHeight*k),c=document.createElement('canvas');
+  c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);return{d:c.toDataURL('image/jpeg',0.72),w,h}}
+ finally{URL.revokeObjectURL(url)}
+}
+const thumbs=(ids,cls)=>ids&&ids.length?`<div class="${cls||'thumbs'}">${ids.map(id=>`<img data-img="${esc(id)}" alt="Bilde av avvik" loading="lazy">`).join('')}</div>`:'';
+function hydrate(){document.querySelectorAll('img[data-img]:not([src])').forEach(el=>{idbGet(el.dataset.img).then(v=>{if(v)el.src=v.d;else el.replaceWith(Object.assign(document.createElement('span'),{className:'miss small',textContent:'Bilde mangler'}))}).catch(()=>{})})}
+let vis=null;
+const vBilde=()=>vis&&IMG[vis]?`<div class="ov lys" role="dialog" aria-label="Bilde"><img src="${IMG[vis].d}" alt="Bilde av avvik"><button class="btn ghost lukk" data-act="lukkbilde">Lukk</button></div>`:'';
+const alert2=t=>{const m=document.querySelector('.avvik')||$('main');const p=document.createElement('p');p.className='note warn';p.textContent=t;m.prepend(p)};
 let pend=null;
 function vModal(i){
  if(!pend||!i)return '';const inn=pend==='inn',n=Date.now();
@@ -812,14 +848,16 @@ function render(){
  $('ht').textContent=v==='insp'?i.nr:v==='ny'?'Ny inspeksjon':'Inspeksjoner';
  $('hs').textContent=v==='insp'?i.strekk+' · '+i.kunde:v==='ny'?'Leak Detector · Feltmakker':S.insp.filter(x=>x.status!=='klar').length+' pågående · '+S.insp.filter(x=>x.status==='klar').length+' fullført';
  if(v!=='insp')pend=null;
- $('main').innerHTML=v==='insp'?vInsp(i)+vModal(i):v==='ny'?vNy():vList()+vSlett();
+ $('main').innerHTML=(v==='insp'?vInsp(i)+vModal(i):v==='ny'?vNy():vList()+vSlett())+vBilde();
+ hydrate();
  const key=v+'|'+(S.cur||'')+'|'+(v==='insp'?S.tab:'');if(key!==lastKey){if(lastKey)toTop();lastKey=key}
  const ok=$('okbtn');if(ok)ok.focus({preventScroll:true});
 }
 const go=()=>{save();render()};
 
 document.addEventListener('click',e=>{
- if(e.target.classList.contains('ov')){pend=null;slettId=null;render();return}
+ if(e.target.classList.contains('ov')||e.target.closest('.ov.lys')&&e.target.tagName==='IMG'){pend=null;slettId=null;vis=null;render();return}
+ if(e.target.tagName==='IMG'&&e.target.dataset.img&&e.target.src){vis=e.target.dataset.img;render();return}
  if(Date.now()-swipedAt<400&&e.target.closest('.card'))return;
  const b=e.target.closest('button');if(!b)return;
  const i=cur(),d=b.dataset;
@@ -827,17 +865,18 @@ document.addEventListener('click',e=>{
  if(b.id==='back'){S.view='liste';S.cur=null;go();return}
  if(d.open){S.cur=d.open;S.view='insp';S.tab='felt';go();return}
  if(d.tab){S.tab=d.tab;go();return}
- if(!i&&!['ny','nullstill','avbryt','slettok'].includes(d.act))return;
+ if(!i&&!['ny','nullstill','avbryt','slettok','lukkbilde'].includes(d.act))return;
  if(d.delokt!=null){const o=i.okter.splice(+d.delokt,1)[0];log(i,'Økt slettet: '+dt(o.inn)+'–'+tid(o.ut));go();return}
  if(d.delkm!=null){i.km.splice(+d.delkm,1);go();return}
  if(d.avstat!=null){const a=i.avvik[+d.avstat];a.status=a.status==='Lukket'?'Åpen':'Lukket';log(i,'Avvik '+(a.status==='Lukket'?'lukket':'gjenåpnet')+': '+a.type);go();return}
  const A={
   ny(){S.view='ny';S.cur=null},
-  nullstill(){S=seed()},
+  nullstill(){S=seed();idbClear()},
+  lukkbilde(){vis=null},
   inn(){pend='inn'},
   ut(){pend='ut'},
   avbryt(){pend=null;slettId=null},
-  slettok(){S.insp=S.insp.filter(x=>x.id!==slettId);slettId=null},
+  slettok(){const x=S.insp.find(y=>y.id===slettId);if(x)idbDel(bildeIds(x));S.insp=S.insp.filter(y=>y.id!==slettId);slettId=null},
   redig(){redig=true},
   ferdig(){redig=false},
   okinn(){pend=null;if(!i.inn){i.inn=Date.now();log(i,'Stemplet inn')}},
@@ -868,9 +907,13 @@ document.addEventListener('submit',e=>{
  if(!i)return;
  if(f.id==='loggform'){const x=$('loggtxt').value.trim();if(x){log(i,x);go();const n=$('loggtxt');if(n)n.focus()}return}
  if(f.id==='kmform'){const k=+$('kmval').value;if(k>0){i.km.push({bil:$('kmbil').value,km:k,t:Date.now()});go()}return}
- if(f.id==='avvikform'){const fd=new FormData(f),fil=fd.get('bilde');
-  i.avvik.push({t:Date.now(),type:fd.get('type'),alvor:fd.get('alvor'),beskr:fd.get('beskr').trim(),status:'Åpen',bilde:fil&&fil.name?fil.name:''});
-  log(i,'Avvik registrert: '+fd.get('type'));go()}
+ if(f.id==='avvikform'){const fd=new FormData(f),filer=fd.getAll('bilde').filter(x=>x&&x.size),btn=f.querySelector('button');
+  btn.disabled=true;btn.textContent=filer.length?'Lagrer bilde'+(filer.length>1?'r':'')+' …':'Lagrer …';
+  (async()=>{const ids=[];let feil=0;
+   for(const fil of filer){try{const v=await krymp(fil),id='b'+Date.now()+Math.random().toString(36).slice(2,7);await idbPut(id,v);IMG[id]=v;ids.push(id)}catch(e){feil++}}
+   i.avvik.push({t:Date.now(),type:fd.get('type'),alvor:fd.get('alvor'),beskr:fd.get('beskr').trim(),status:'Åpen',bilder:ids});
+   log(i,'Avvik registrert: '+fd.get('type')+(ids.length?' ('+ids.length+' bilde'+(ids.length>1?'r':'')+')':''));go();
+   if(feil)alert2(feil+' bilde'+(feil>1?'r':'')+' kunne ikke lagres.')})()}
 });
 document.addEventListener('change',e=>{const k=e.target.dataset.f,i=cur();if(!k||!i)return;
  i[k]=k==='meter'?(e.target.value?+e.target.value:null):e.target.value;go()});
