@@ -111,6 +111,9 @@ summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:
 .seg input:checked+span{background:var(--water);color:var(--waterInk);border-color:var(--water)}
 .seg input:focus-visible+span{outline:3px solid var(--sky)}
 .avvik p{margin:4px 0 8px}
+.doc{border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0;background:#fff;overflow-x:auto;box-shadow:0 4px 14px -8px rgba(0,0,0,.25)}
+.refbtn{display:flex;gap:8px;flex-wrap:wrap}.refbtn .btn{flex:1 1 0}
+@media print{body{background:#fff}.app{box-shadow:none;max-width:none;min-height:0}header,.sum,.tabs,footer,#main section>*:not(#refdoc){display:none!important}#main section{padding:0}.doc{border:0;padding:0;margin:0;box-shadow:none;overflow:visible}@page{margin:15mm}}
 .sw{position:relative;margin-bottom:10px;border-radius:14px;overflow:hidden;background:#f6ddd0}
 .sw.go{background:var(--hot)}
 .sw-bg{position:absolute;inset:0;display:flex;align-items:center;padding:0 22px;font-weight:700;color:#9a3a0a}
@@ -185,12 +188,12 @@ const ALV={Lav:'lav',Middels:'mid','Høy':'hoy'};
 let q='';
 const hay=i=>[i.nr,i.kunde,i.strekk,i.kontraktor,i.maalesystem,i.flytekabel,i.startkum,i.endekum].join(' ').toLowerCase();
 function listRes(){
- const card=i=>`<div class="sw"><div class="sw-bg">Slett</div><button class="card" data-open="${esc(i.id)}"><span class="row"><b>${esc(i.nr)}</b><span class="chip ${i.status==='klar'?'klar':(i.inn?'felt':'')}">${i.status==='klar'?'Klar til fakturering':(i.inn?'Ute i felt':'Pågår')}</span></span><span class="big">${esc(i.strekk)}</span><span class="mute small">${esc(i.kunde)} · ${fmtT(timer(i))} · ${kmSum(i)} km</span></button></div>`;
+ const card=i=>`<div class="sw"><div class="sw-bg">Slett</div><button class="card" data-open="${esc(i.id)}"><span class="row"><b>${esc(i.nr)}</b><span class="chip ${i.status==='klar'?'klar':(i.inn?'felt':'')}">${i.status==='klar'?'Fullført':(i.inn?'Ute i felt':'Pågår')}</span></span><span class="big">${esc(i.strekk)}</span><span class="mute small">${esc(i.kunde)} · ${fmtT(timer(i))} · ${kmSum(i)} km</span></button></div>`;
  const ord=q.trim().toLowerCase().split(/\s+/).filter(Boolean),L=S.insp.filter(i=>{const h=hay(i);return ord.every(o=>h.includes(o))});
  const a=L.filter(i=>i.status!=='klar'),k=L.filter(i=>i.status==='klar');
  if(ord.length&&!L.length)return `<p class="mute">Ingen oppdrag passer «${esc(q.trim())}».</p>`;
  return `<h2>Pågående</h2>${a.map(card).join('')||`<p class="mute">${ord.length?'Ingen treff.':'Ingen pågående inspeksjoner.'}</p>`}
- <h2>Klar til fakturering</h2>${k.map(card).join('')||`<p class="mute">${ord.length?'Ingen treff.':'Ingen ennå.'}</p>`}`;
+ <h2>Fullført</h2>${k.map(card).join('')||`<p class="mute">${ord.length?'Ingen treff.':'Ingen ennå.'}</p>`}`;
 }
 function vList(){
  return `<section class="pad"><div class="hero"><img src="${LOGO}" alt="Leak Detector"><span>Feltapp</span></div><button class="btn primary wide" data-act="ny">+ Ny inspeksjon</button>
@@ -231,16 +234,16 @@ function oppdrag(i,L){
  <div class="two">${f('startkum','Startkum','15376')}${f('endekum','Endekum','Fylles inn')}</div></div>`}
 
 function vInsp(i){
- const tabs=[['felt','Felt'],['logg','Logg'],['avvik','Avvik'],['km','Kjøring'],['faktura','Faktura']];
+ const tabs=[['felt','Felt'],['logg','Logg'],['avvik','Avvik'],['km','Kjøring'],['faktura','Referat']];
  const n=i.avvik.filter(a=>a.status!=='Lukket').length;
- const T={felt:tFelt,logg:tLogg,avvik:tAvvik,km:tKm,faktura:tFakt}[S.tab]||tFelt;
+ const T={felt:tFelt,logg:tLogg,avvik:tAvvik,km:tKm,faktura:tRef}[S.tab]||tFelt;
  return `<div class="sum"><div><small>Timer i felt</small><b id="sumT">${fmtT(timer(i))}</b></div><div><small>Kjøring</small><b>${kmSum(i)} km</b></div><div><small>Kabel</small><b>${i.ut?(i.opp?'Trukket opp':'Ute'):'Ikke ute'}</b></div></div>
  <nav class="tabs">${tabs.map(([k,l])=>`<button data-tab="${k}" class="${S.tab===k?'on':''}">${l}${k==='avvik'&&n?` <span class="n">${n}</span>`:''}</button>`).join('')}</nav>
  <section class="pad">${T(i)}</section>`;
 }
 function tFelt(i){
  const L=i.status==='klar';
- const stamp=L?`<div class="note ok">Klar til fakturering. Gjenåpne under Faktura for å endre.</div>`:
+ const stamp=L?`<div class="note ok">Oppdraget er fullført. Gjenåpne under Referat for å endre.</div>`:
  (i.inn?`<button class="stamp out" data-act="ut"><span>Stemple ut</span><small>Ute i felt siden ${tid(i.inn)} · <span id="live">${dur(Date.now()-i.inn)}</span></small></button>`
  :`<button class="stamp in" data-act="inn"><span>Stemple inn</span><small>Teamleder stempler for hele teamet</small></button>`);
  const okt=i.okter.map((o,r)=>`<li><span>${dato(o.inn)}</span><span>${tid(o.inn)}–${tid(o.ut)}${o.manuell?' <em>manuelt</em>':''}</span><b>${fmtT((o.ut-o.inn)/H)}</b>${L?'<span></span>':`<button class="x" data-delokt="${r}" aria-label="Slett økt">×</button>`}</li>`).reverse().join('');
@@ -273,20 +276,68 @@ function tKm(i){
  <ul class="list okt">${li||'<li class="mute">Ingen kjøring registrert.</li>'}</ul>
  <p class="total">Totalt <b>${kmSum(i)} km</b></p>`;
 }
-const rows=i=>[['Inspeksjonsnr.',i.nr],['Kommune/kunde',i.kunde],['Navn på strekk',i.strekk],['Antall meter',i.meter?i.meter+' m':''],['Måleperiode',i.ut?periode(i):''],['Kontraktør',i.kontraktor],['L.D. Mobiliseringstimer',fmtT(timer(i))],['L.D. Kjøredistanse',kmSum(i)+' km'],['Kommentarer',i.kommentar]];
+const num=n=>String(+(+n).toFixed(2)).replace('.',',');
+const dager=ms=>{const h=Math.round(ms/H);return (h>=24?Math.floor(h/24)+' d ':'')+(h%24)+' t'};
+function refData(i){
+ const okt=i.okter.slice().sort((a,b)=>a.inn-b.inn),logg=i.logg.slice().sort((a,b)=>a.t-b.t),bil={};
+ i.km.forEach(k=>{bil[k.bil]=(bil[k.bil]||0)+(+k.km||0)});
+ return{status:i.status==='klar'?'Fullført':'Utkast',
+  oppdrag:[['Inspeksjonsnr.',i.nr],['Kommune/kunde',i.kunde],['Navn på strekk',i.strekk],['Kontraktør',i.kontraktor]],
+  utstyr:[['Målesystem',i.maalesystem],['Flytekabel',i.flytekabel],['Startkum',i.startkum],['Endekum',i.endekum],['Antall meter',i.meter?i.meter+' m':'']],
+  tid:[['Måleperiode',i.ut?periode(i):''],['Kabel i bakken',i.ut?(i.opp?dager(i.opp-i.ut):'Ligger ute nå'):'']],
+  okt:okt.map(o=>dato(o.inn)+' kl. '+tid(o.inn)+'–'+tid(o.ut)+' ('+num((o.ut-o.inn)/H)+' t)'+(o.manuell?', lagt inn manuelt':'')).concat(i.inn?[dato(i.inn)+' fra kl. '+tid(i.inn)+', pågår']:[]),
+  logg:logg.map(l=>[dato(l.t)+' '+tid(l.t),l.x]),
+  avvik:i.avvik.slice().sort((a,b)=>a.t-b.t),
+  ress:[['L.D. Mobiliseringstimer',num(timer(i))+' t']].concat(Object.keys(bil).map(b=>['Kjøring '+b,num(bil[b])+' km']),[['L.D. Kjøredistanse totalt',num(kmSum(i))+' km']]),
+  kommentar:i.kommentar||''};
+}
+const RB='border:1px solid #c9d6dc;padding:6px 10px;vertical-align:top;text-align:left;font-size:14px;';
+const RH='font-size:15px;color:#26739c;margin:22px 0 8px;';
+const ACOL={'Høy':'#e8590c','Middels':'#f0a020','Lav':'#65cfe9'};
+const kvH=r=>`<table style="border-collapse:collapse;width:100%">${r.map(([k,v])=>`<tr><th style="${RB}background:#eef5f8;font-weight:600;width:40%">${k}</th><td style="${RB}">${v?esc(v):'<i style="color:#9a5200">Ikke fylt inn</i>'}</td></tr>`).join('')}</table>`;
+function refDoc(i,logo){
+ const d=refData(i);
+ return `<div style="font-family:Montserrat,Arial,sans-serif;color:#2f3437;line-height:1.45">
+ ${logo?`<img src="${LOGO}" alt="Leak Detector" style="width:150px;height:auto;display:block;margin-bottom:10px">`:''}
+ <h1 style="font-size:20px;margin:0;color:#2f3437">Installasjonsreferat</h1>
+ <p style="margin:2px 0 0;color:#5d686e;font-size:14px">${esc(i.nr)} · ${esc(i.strekk)} · <b>${d.status}</b></p>
+ <h2 style="${RH}">1. Oppdrag</h2>${kvH(d.oppdrag)}
+ <h2 style="${RH}">2. Utstyr</h2>${kvH(d.utstyr)}
+ <h2 style="${RH}">3. Tidslinje</h2>${kvH(d.tid)}
+ <p style="margin:12px 0 4px;font-weight:600;font-size:14px">Dager i felt</p>
+ ${d.okt.length?`<ul style="margin:0;padding-left:20px;font-size:14px">${d.okt.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p style="font-size:14px;margin:0">Ingen økter registrert.</p>'}
+ <p style="margin:12px 0 4px;font-weight:600;font-size:14px">Feltlogg</p>
+ ${d.logg.length?`<table style="border-collapse:collapse;width:100%">${d.logg.map(([t,x])=>`<tr><td style="${RB}white-space:nowrap;width:1%;color:#5d686e">${t}</td><td style="${RB}">${esc(x)}</td></tr>`).join('')}</table>`:'<p style="font-size:14px;margin:0">Ingen oppdateringer.</p>'}
+ <h2 style="${RH}">4. Avvik</h2>
+ ${d.avvik.length?d.avvik.map(a=>`<div style="border:1px solid #c9d6dc;border-left:5px solid ${ACOL[a.alvor]||'#c9d6dc'};padding:8px 10px;margin-bottom:8px;font-size:14px"><b>${esc(a.type)}</b> · ${esc(a.alvor)} · ${esc(a.status)}<br><span style="color:#5d686e">${dt(a.t)}${a.bilde?' · bilde: '+esc(a.bilde):''}</span><br>${esc(a.beskr)}</div>`).join(''):'<p style="font-size:14px;margin:0">Ingen avvik registrert.</p>'}
+ <h2 style="${RH}">5. Ressursbruk</h2>${kvH(d.ress)}
+ <h2 style="${RH}">6. Kommentarer</h2><p style="white-space:pre-line;font-size:14px;margin:0">${d.kommentar?esc(d.kommentar):'–'}</p>
+ <p style="margin:24px 0 0;font-size:12px;color:#5d686e">Generert ${dt(Date.now())} · Leak Detector feltapp</p></div>`;
+}
+function refText(i){
+ const d=refData(i),L=['INSTALLASJONSREFERAT – '+i.nr,i.strekk+' · '+d.status],kv=r=>r.forEach(([k,v])=>L.push(k+': '+(v||'–')));
+ L.push('','1. OPPDRAG');kv(d.oppdrag);L.push('','2. UTSTYR');kv(d.utstyr);L.push('','3. TIDSLINJE');kv(d.tid);
+ L.push('Dager i felt:');d.okt.forEach(x=>L.push('  - '+x));if(!d.okt.length)L.push('  Ingen');
+ L.push('Feltlogg:');d.logg.forEach(([t,x])=>L.push('  '+t+'  '+x));if(!d.logg.length)L.push('  Ingen');
+ L.push('','4. AVVIK');d.avvik.forEach(a=>L.push('- '+a.type+' · '+a.alvor+' · '+a.status+' ('+dt(a.t)+'): '+a.beskr));if(!d.avvik.length)L.push('Ingen avvik registrert.');
+ L.push('','5. RESSURSBRUK');kv(d.ress);L.push('','6. KOMMENTARER',d.kommentar||'–','','Generert '+dt(Date.now())+' · Leak Detector feltapp');
+ return L.join('\n');
+}
 function mangler(i){
  const m=[];if(i.inn)m.push('Teamet er fortsatt stemplet inn.');
  if(!i.ut)m.push('Kabel er ikke satt ut.');else if(!i.opp)m.push('Kabel er ikke trukket opp.');
  if(!i.meter)m.push('Antall meter mangler.');if(!i.kontraktor)m.push('Kontraktør mangler.');
  const a=i.avvik.filter(x=>x.status!=='Lukket').length;if(a)m.push(a+' åpne avvik må lukkes.');return m;
 }
-function tFakt(i){
+function tRef(i){
  const m=mangler(i),K=i.status==='klar';
- return `<table class="fakt"><tbody>${rows(i).map(([k,v])=>`<tr><th>${k}</th><td>${k==='Kommentarer'&&!K?`<textarea data-f="kommentar" rows="3" placeholder="Valgfritt">${esc(v)}</textarea>`:(esc(v)||'<span class="miss">mangler</span>')}</td></tr>`).join('')}</tbody></table>
- ${K?`<div class="note ok">Markert klar til fakturering.</div><button class="btn primary wide" data-act="kopier">Kopier fakturagrunnlag</button><p class="mute small" id="kopimsg">Kopieres som tabell, klar til å limes inn i Excel eller en e-post.</p><button class="btn ghost wide" data-act="gjenapne">Gjenåpne inspeksjonen</button>`
- :`<button class="btn ghost tiny" data-act="hentavvik">Hent avvik inn i kommentaren</button>
- ${m.length?`<div class="note warn"><b>Før fakturering:</b><ul>${m.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
- <button class="btn vis wide" data-act="klar" ${m.length?'disabled':''}>Klar til fakturering</button>${m.length?'<p class="mute small">Knappen blir aktiv når listen over er tom.</p>':''}`}`;
+ return `${K?'':`<label>Kommentarer til referatet<textarea data-f="kommentar" rows="3" placeholder="Valgfritt, vises nederst i referatet">${esc(i.kommentar)}</textarea></label>`}
+ <div class="doc" id="refdoc">${refDoc(i,true)}</div>
+ <div class="refbtn">${navigator.share?'<button class="btn primary" data-act="del">Del</button>':''}<button class="btn ghost" data-act="kopier">Kopier</button><button class="btn ghost" data-act="pdf">Lagre som PDF</button></div>
+ <p class="mute small" id="kopimsg">${navigator.share?'Del sender referatet til e-post, Teams og lignende. ':''}Kopier limes inn i e-post eller Word.</p>
+ ${K?`<div class="note ok">Oppdraget er fullført.</div><button class="btn ghost wide" data-act="gjenapne">Gjenåpne inspeksjonen</button>`
+ :`${m.length?`<div class="note warn"><b>Før oppdraget kan fullføres:</b><ul>${m.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+ <button class="btn vis wide" data-act="klar" ${m.length?'disabled':''}>Marker som fullført</button>${m.length?'<p class="mute small">Knappen blir aktiv når listen over er tom.</p>':''}`}`;
 }
 let pend=null;
 function vModal(i){
@@ -305,7 +356,7 @@ function render(){
  const v=S.view||'liste';
  $('back').hidden=v==='liste';$('mark').hidden=v==='liste';
  $('ht').textContent=v==='insp'?i.nr:v==='ny'?'Ny inspeksjon':'Inspeksjoner';
- $('hs').textContent=v==='insp'?i.strekk+' · '+i.kunde:v==='ny'?'Leak Detector · feltapp':S.insp.filter(x=>x.status!=='klar').length+' pågående · '+S.insp.filter(x=>x.status==='klar').length+' klar til fakturering';
+ $('hs').textContent=v==='insp'?i.strekk+' · '+i.kunde:v==='ny'?'Leak Detector · feltapp':S.insp.filter(x=>x.status!=='klar').length+' pågående · '+S.insp.filter(x=>x.status==='klar').length+' fullført';
  if(v!=='insp')pend=null;
  $('main').innerHTML=v==='insp'?vInsp(i)+vModal(i):v==='ny'?vNy():vList()+vSlett();
  const key=v+'|'+(S.cur||'')+'|'+(v==='insp'?S.tab:'');if(key!==lastKey){if(lastKey)toTop();lastKey=key}
@@ -342,17 +393,14 @@ document.addEventListener('click',e=>{
   manuell(){const f=new Date($('mfra').value).getTime(),t=new Date($('mtil').value).getTime();
    if(!f||!t||t<=f){$('merr').textContent='Sjekk at «Til» er etter «Fra».';return 'stay'}
    i.okter.push({inn:f,ut:t,manuell:true});i.okter.sort((a,b)=>a.inn-b.inn);log(i,'Økt lagt til manuelt: '+dt(f)+'–'+tid(t))},
-  hentavvik(){const t=i.avvik.length?i.avvik.map(a=>'Avvik ('+a.alvor.toLowerCase()+'): '+a.beskr).join('\n'):'Ingen avvik.';i.kommentar=(i.kommentar?i.kommentar+'\n':'')+t},
-  klar(){i.status='klar';log(i,'Markert klar til fakturering')},
+  klar(){i.status='klar';log(i,'Markert som fullført')},
   gjenapne(){i.status='aktiv';log(i,'Gjenåpnet')},
-  kopier(){const msg=$('kopimsg'),ok=()=>{msg.textContent='Kopiert. Lim inn i Excel med Ctrl+V.'},fail=()=>{msg.textContent='Nettleseren tillot ikke kopiering her. Marker tabellen og kopier manuelt.'};
-   const num=n=>String(+(+n).toFixed(2)).replace('.',',');
-   const C=[['Inspeksjonsnr.',i.nr],['Kommune/kunde',i.kunde],['Navn på strekk',i.strekk],['Antall meter',i.meter?num(i.meter):''],['Måleperiode',i.ut?periode(i):''],['Kontraktør',i.kontraktor],['L.D. Mobiliseringstimer (t)',num(timer(i))],['L.D. Kjøredistanse (km)',num(kmSum(i))],['Kommentarer',i.kommentar||'']];
-   const txt=C.map(([k,v])=>k+'\t'+String(v).replace(/\s*\n\s*/g,' ')).join('\r\n');
-   const b='border:1px solid #9aa9b1;padding:4px 8px;vertical-align:top;';
-   const html='<table style="border-collapse:collapse;table-layout:fixed;font-family:Calibri,Arial,sans-serif;font-size:11pt"><col width="240" style="mso-width-source:userset;width:180pt"><col width="340" style="mso-width-source:userset;width:255pt">'+C.map(([k,v])=>'<tr><td style="'+b+'width:180pt;white-space:nowrap;background:#e6eef2;font-weight:bold">'+esc(k)+'</td><td style="'+b+'width:255pt;white-space:'+(k==='Kommentarer'?'normal':'nowrap')+'">'+esc(v).replace(/\n/g,'<br style="mso-data-placement:same-cell">')+'</td></tr>').join('')+'</table>';
+  kopier(){const msg=$('kopimsg'),ok=()=>{msg.textContent='Kopiert. Lim inn i e-post, Teams eller Word.'},fail=()=>{msg.textContent='Nettleseren tillot ikke kopiering her. Prøv «Del» i stedet.'};
+   const html=refDoc(i,false),txt=refText(i);
    try{if(window.ClipboardItem&&navigator.clipboard.write){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(ok,()=>navigator.clipboard.writeText(txt).then(ok,fail))}else navigator.clipboard.writeText(txt).then(ok,fail)}
-   catch(err){fail()}return 'stay'}
+   catch(err){fail()}return 'stay'},
+  del(){const msg=$('kopimsg');try{navigator.share({title:'Installasjonsreferat '+i.nr,text:refText(i)}).catch(()=>{})}catch(err){msg.textContent='Deling er ikke tilgjengelig her. Bruk «Kopier».'}return 'stay'},
+  pdf(){const msg=$('kopimsg');msg.textContent='Velg «Lagre som PDF» i utskriftsvinduet. Skjer ingenting, bruk «Del» eller «Kopier».';try{window.print()}catch(err){}return 'stay'}
  };
  if(A[d.act]&&A[d.act]()!=='stay')go();
 });
